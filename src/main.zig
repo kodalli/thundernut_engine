@@ -1,10 +1,14 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const gl = @import("zopengl");
+const callbacks = @import("libs/callbacks.zig");
 const print = std.debug.print;
 
 pub fn main() !void {
-    try glfw.init();
+    glfw.init() catch {
+        std.log.err("Failed to initialize GLFW library.", .{});
+        return;
+    };
     defer glfw.terminate();
 
     const gl_major = 4;
@@ -25,7 +29,7 @@ pub fn main() !void {
 
     try gl.loadCoreProfile(glfw.getProcAddress, gl_major, gl_minor);
 
-    // sync rendering loop iwth refresh rate
+    // sync rendering loop with refresh rate
     // when the entire frame has been rendered, we have to swap the back and front swapBuffers
     // to render the new frame
     // swapInterval is the minimum number of monitor refreshes the driver should wait from the 21:25
@@ -34,14 +38,14 @@ pub fn main() !void {
 
     window.setAttribute(.resizable, true);
 
-    _ = window.setContentScaleCallback(contentScaleCallback);
-    _ = window.setFramebufferSizeCallback(framebufferSizeCallback);
-    _ = window.setSizeCallback(sizeCallback);
-    _ = window.setPosCallback(posCallback);
-    _ = window.setCursorPosCallback(cursorPosCallback);
-    _ = window.setMouseButtonCallback(mouseButtonCallback);
-    _ = window.setKeyCallback(keyCallback);
-    _ = window.setScrollCallback(scrollCallback);
+    _ = window.setContentScaleCallback(callbacks.contentScaleCallback);
+    _ = window.setFramebufferSizeCallback(callbacks.framebufferSizeCallback);
+    _ = window.setSizeCallback(callbacks.sizeCallback);
+    _ = window.setPosCallback(callbacks.posCallback);
+    _ = window.setCursorPosCallback(callbacks.cursorPosCallback);
+    _ = window.setMouseButtonCallback(callbacks.mouseButtonCallback);
+    _ = window.setKeyCallback(callbacks.keyCallback);
+    _ = window.setScrollCallback(callbacks.scrollCallback);
     _ = window.setKeyCallback(null);
 
     const cursor = try glfw.Cursor.createStandard(.hand);
@@ -72,55 +76,4 @@ pub fn main() !void {
 
         try glfw.maybeError();
     }
-}
-
-fn contentScaleCallback(window: *glfw.Window, xscale: f32, yscale: f32) callconv(.C) void {
-    _ = window;
-    _ = xscale;
-    _ = yscale;
-}
-
-fn framebufferSizeCallback(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
-    _ = height;
-    _ = width;
-    _ = window;
-}
-
-fn sizeCallback(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
-    _ = window;
-    _ = width;
-    _ = height;
-}
-
-fn posCallback(window: *glfw.Window, xpos: i32, ypos: i32) callconv(.C) void {
-    _ = window;
-    _ = xpos;
-    _ = ypos;
-}
-
-fn cursorPosCallback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C) void {
-    _ = window;
-    _ = xpos;
-    _ = ypos;
-}
-
-fn mouseButtonCallback(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = window;
-    _ = button;
-    _ = mods;
-    print("mouse action {}\n", .{action});
-}
-
-fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv(.C) void {
-    _ = window;
-    _ = xoffset;
-    _ = yoffset;
-}
-
-fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = window;
-    _ = scancode;
-    _ = mods;
-
-    print("{} {}\n", .{ key, action });
 }
