@@ -1,6 +1,7 @@
 const std = @import("std");
 const zmath = @import("libs/zmath/build.zig");
 const zglfw = @import("libs/zglfw/build.zig");
+const zopengl = @import("libs/zopengl/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -18,11 +19,13 @@ pub fn build(b: *std.Build) void {
         .options = .{ .enable_cross_platform_determinism = true },
     });
 
-    zmath_pkg.link(exe);
-
     const zglfw_pkg = zglfw.package(b, target, optimize, .{});
 
+    const zopengl_pkg = zopengl.package(b, target, optimize, .{});
+
+    zmath_pkg.link(exe);
     zglfw_pkg.link(exe);
+    zopengl_pkg.link(exe);
 
     b.installArtifact(exe);
 
