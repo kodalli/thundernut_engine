@@ -1,7 +1,4 @@
 const std = @import("std");
-const zmath = @import("libs/zmath/build.zig");
-const zglfw = @import("libs/zglfw/build.zig");
-const zopengl = @import("libs/zopengl/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -15,12 +12,15 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const zmath = @import("libs/zig-gamedev/libs/zmath/build.zig");
     const zmath_pkg = zmath.package(b, target, optimize, .{
         .options = .{ .enable_cross_platform_determinism = true },
     });
 
+    const zglfw = @import("libs/zig-gamedev/libs/zglfw/build.zig");
     const zglfw_pkg = zglfw.package(b, target, optimize, .{});
 
+    const zopengl = @import("libs/zig-gamedev/libs/zopengl/build.zig");
     const zopengl_pkg = zopengl.package(b, target, optimize, .{});
 
     zmath_pkg.link(exe);
