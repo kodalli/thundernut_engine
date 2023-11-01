@@ -21,7 +21,11 @@ pub fn build(b: *std.Build) void {
     const zglfw_pkg = zglfw.package(b, target, optimize, .{});
 
     const zopengl = @import("libs/zig-gamedev/libs/zopengl/build.zig");
-    const zopengl_pkg = zopengl.package(b, target, optimize, .{});
+    const zopengl_pkg = zopengl.package(b, target, optimize, .{
+        .options = .{
+            .api = .raw_bindings,
+        },
+    });
 
     zmath_pkg.link(exe);
     zglfw_pkg.link(exe);
