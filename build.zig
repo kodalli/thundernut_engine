@@ -25,6 +25,26 @@ pub fn build(b: *std.build.Builder) !void {
     const zglfw_pkg = zglfw.package(b, target, optimize, .{});
     zglfw_pkg.link(exe);
 
+    const zmath = @import("libs/zig-gamedev/libs/zmath/build.zig");
+    const zmath_pkg = zmath.package(b, target, optimize, .{
+        .options = .{ .enable_cross_platform_determinism = true },
+    });
+    zmath_pkg.link(exe);
+
+    const zmesh = @import("libs/zig-gamedev/libs/zmesh/build.zig");
+    const zmesh_pkg = zmesh.package(b, target, optimize, .{});
+    zmesh_pkg.link(exe);
+
+    const zphysics = @import("libs/zig-gamedev/libs/zphysics/build.zig");
+    const zphysics_pkg = zphysics.package(b, target, optimize, .{
+        .options = .{
+            .use_double_precision = false,
+            .enable_debug_renderer = true,
+            .enable_asserts = true,
+        },
+    });
+    zphysics_pkg.link(exe);
+
     // Same as above for our GL module,
     // because we copied the GL code into the project
     // we instead just create the module inline
