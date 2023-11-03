@@ -24,6 +24,25 @@
 - Renderer goes last
 - Audio can be parallel with renderer
 
+#### Parallelize Sparse Sets
+- Using chunking to divide sparse set into smaller chunks then process each chunk in parallel
+    1. Create list of chunks, each chunk is subset of sparse set
+    2. For each chunk create new thread/task to process chunk
+    3. Process each chunk in parallel
+    4. Once all chunks processed, merge results back into sparse set
+- To handle dependent components, use component filtering which process entities in a chunk that have the required components
+    1. Get list of all entities in chunk
+    2. Filter the list of entities to only include entities that have the required components
+    3. Process filtered list of entities
+- When order matters use a DAG to schedule execution
+- Archetype table to speed up filtering
+
+#### Archetype Table
+- All components will be known at compile time and have ids
+    - When you register a component check if comp id exists otherwise add
+- Need a vec of component ids
+- Get Archetype id or insert new one
+
 ### Bevy
 
 **Sparse Sets** (Less Memory)
