@@ -26,7 +26,7 @@ const Vertex = struct {
     indices: []gl.GLuint,
 };
 
-const Mesh = struct {
+pub const Mesh = struct {
     vao: gl.GLuint,
     vbo: gl.GLuint,
     ebo: gl.GLuint,
@@ -42,9 +42,10 @@ const Mesh = struct {
             .indexCount = indices.len,
         };
 
-        const floatSize = @sizeOf(gl.FLOAT);
+        const floatSize = @sizeOf(gl.GLfloat);
         const vertexSize = 8 * floatSize;
         const positionOffset = 0 * floatSize;
+        _ = positionOffset;
         const normalOffset = 3 * floatSize;
         const uvOffset = 6 * floatSize;
 
@@ -52,7 +53,7 @@ const Mesh = struct {
         gl.bindVertexArray(mesh.vao);
 
         // Position
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(positionOffset)));
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, vertexSize, null);
         gl.enableVertexAttribArray(0);
 
         // Normal
@@ -65,11 +66,11 @@ const Mesh = struct {
 
         gl.genBuffers(1, &mesh.vbo);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, floatSize * vertices.len, vertices.ptr, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, @as(gl.GLsizeiptr, @intCast(floatSize * vertices.len)), vertices.ptr, gl.STATIC_DRAW);
 
         gl.genBuffers(1, &mesh.ebo);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.ebo);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(gl.GLuint) * indices.len, indices.ptr, gl.STATIC_DRAW);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @as(gl.GLsizeiptr, @intCast(@sizeOf(gl.GLuint) * indices.len)), indices.ptr, gl.STATIC_DRAW);
 
         gl.bindVertexArray(0);
         return mesh;

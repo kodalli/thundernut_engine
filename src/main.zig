@@ -4,6 +4,7 @@ const gl = @import("gl");
 const utils = @import("libs/utils.zig");
 const zmath = @import("zmath");
 const zmesh = @import("zmesh");
+const prim = @import("libs/primitives/primitives.zig");
 
 const print = std.debug.print;
 pub const GLProc = *const fn () callconv(.C) void;
@@ -86,6 +87,7 @@ fn appendMesh(
         meshes_texcoords.appendSlice(uv) catch unreachable;
     } else {
         std.log.info("No texcoords to add to mesh", .{});
+        meshes_texcoords.appendNTimes([_]f32{ 0, 0 }, meshes_positions.items.len) catch unreachable;
     }
 }
 
@@ -117,26 +119,63 @@ fn generateMeshes(
     }
 }
 
-fn create(allocator: std.mem.Allocator, window: *glfw.Window) !void {
-    _ = window;
+fn create(allocator: std.mem.Allocator) !prim.Mesh {
     var arena_state = std.heap.ArenaAllocator.init(allocator);
     defer arena_state.deinit();
     const arena = arena_state.allocator();
 
     var meshes = std.ArrayList(Mesh).init(allocator);
+    defer meshes.deinit();
+
     var meshes_indices = std.ArrayList(Mesh.IndexType).init(arena);
+    defer meshes_indices.deinit();
+
     var meshes_positions = std.ArrayList([3]f32).init(arena);
+    defer meshes_positions.deinit();
+
     var meshes_normals = std.ArrayList([3]f32).init(arena);
+    defer meshes_normals.deinit();
+
     var meshes_texcoords = std.ArrayList([2]f32).init(arena);
+    defer meshes_texcoords.deinit();
+
     generateMeshes(allocator, &meshes, &meshes_indices, &meshes_positions, &meshes_normals, &meshes_texcoords);
 
+    std.log.info("meshes len: {}", .{meshes.items.len});
+    std.log.info("meshes indices len: {}", .{meshes_indices.items.len});
+    std.log.info("meshes positions len: {}", .{meshes_positions.items.len});
+    std.log.info("meshes normals len: {}", .{meshes_normals.items.len});
+    std.log.info("meshes texcoords len: {}", .{meshes_texcoords.items.len});
+
     const total_num_vertices = @as(u32, @intCast(meshes_positions.items.len));
-    _ = total_num_vertices;
     const total_num_indices = @as(u32, @intCast(meshes_indices.items.len));
-    _ = total_num_indices;
+
+    var vertices = try allocator.alloc(f32, 8 * total_num_vertices);
+    defer allocator.free(vertices);
+    var index: usize = 0;
+    for (meshes_positions.items, meshes_normals.items, meshes_texcoords.items) |pos, norm, uv| {
+        const vertex_data = pos ++ norm ++ uv;
+        std.mem.copy(f32, vertices[index..][0..8], &vertex_data);
+        index += 8;
+    }
+
+    var indices = try allocator.alloc(gl.GLuint, total_num_indices);
+    defer allocator.free(indices);
+    index = 0;
+    for (meshes_indices.items) |ind| {
+        indices[index] = ind;
+    }
+
+    var mesh = prim.Mesh.init(vertices, indices);
+
+    return mesh;
 }
 
 pub fn main() !void {
+    try run();
+}
+
+fn run() !void {
     glfw.init() catch {
         std.log.err("Failed to initialize GLFW library.", .{});
         return;
@@ -155,55 +194,16 @@ pub fn main() !void {
     gl.enable(gl.DEPTH_TEST);
 
     const shaderProgram = loadShaders();
-
-    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    //defer _ = gpa.deinit();
-    //const allocator = gpa.allocator();
-    //_ = allocator;
-
-    //try create(allocator, window);
-
-    var vertices = [_]gl.GLfloat{
-        -0.5, -0.5, -0.5,
-        0.5,  -0.5, -0.5,
-        0.5,  0.5,  -0.5,
-        -0.5, 0.5,  -0.5,
-        -0.5, -0.5, 0.5,
-        0.5,  -0.5, 0.5,
-        0.5,  0.5,  0.5,
-        -0.5, 0.5,  0.5,
-    };
-
-    var indices = [_]gl.GLuint{
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4,
-        0, 1, 5, 5, 4, 0,
-        1, 2, 6, 6, 5, 1,
-        2, 3, 7, 7, 6, 2,
-        0, 3, 7, 7, 4, 0,
-    };
-
-    //var normals: [_]gl.GLfloat = undefined;
-
-    var VBO: gl.GLuint = undefined;
-    var VAO: gl.GLuint = undefined;
-    var EBO: gl.GLuint = undefined;
-
-    gl.genVertexArrays(1, &VAO);
-    gl.genBuffers(1, &VBO);
-    gl.genBuffers(1, &EBO);
-
-    gl.bindVertexArray(VAO);
-    gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-    gl.bufferData(gl.ARRAY_BUFFER, @sizeOf(gl.GLfloat) * vertices.len, &vertices, gl.STATIC_DRAW);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, EBO);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, @sizeOf(gl.GLuint) * indices.len, &indices, gl.STATIC_DRAW);
-
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(gl.GLfloat), null);
-    gl.enableVertexAttribArray(0);
+    defer gl.deleteProgram(shaderProgram);
 
     gl.useProgram(shaderProgram);
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var mesh = try create(allocator);
+    defer mesh.deinit();
 
     while (!window.shouldClose()) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -221,4 +221,10 @@ pub fn main() !void {
         window.swapBuffers();
         glfw.pollEvents();
     }
+}
+
+test "leak" {
+    var gpa = std.testing.allocator;
+    defer _ = gpa.deinit();
+    try create(gpa);
 }
