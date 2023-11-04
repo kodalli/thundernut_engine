@@ -81,7 +81,12 @@ fn appendMesh(
     meshes_indices.appendSlice(mesh.indices) catch unreachable;
     meshes_positions.appendSlice(mesh.positions) catch unreachable;
     meshes_normals.appendSlice(mesh.normals.?) catch unreachable;
-    meshes_texcoords.appendSlice(mesh.texcoords.?) catch unreachable;
+
+    if (mesh.texcoords) |uv| {
+        meshes_texcoords.appendSlice(uv) catch unreachable;
+    } else {
+        std.log.info("No texcoords to add to mesh", .{});
+    }
 }
 
 fn generateMeshes(
@@ -106,7 +111,7 @@ fn generateMeshes(
         cube.unweld();
         cube.computeNormals();
 
-        std.log.info("cube has texcoords: {}", .{cube.texcoords.?.len});
+        std.log.info("cube has texcoords: {}", .{cube.texcoords != null});
 
         appendMesh(cube, meshes, meshes_indices, meshes_positions, meshes_normals, meshes_texcoords);
     }
@@ -138,18 +143,7 @@ pub fn main() !void {
     };
     defer glfw.terminate();
 
-    //const window = try setupWindow();
-    const gl_major = 4;
-    const gl_minor = 0;
-
-    glfw.windowHintTyped(.context_version_major, gl_major);
-    glfw.windowHintTyped(.context_version_minor, gl_minor);
-    glfw.windowHintTyped(.opengl_profile, .opengl_core_profile);
-    glfw.windowHintTyped(.opengl_forward_compat, true);
-    glfw.windowHintTyped(.client_api, .opengl_api);
-    glfw.windowHintTyped(.doublebuffer, true);
-
-    const window = try glfw.Window.create(640, 480, "ThunderNut Engine", null);
+    const window = try setupWindow();
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
@@ -162,13 +156,14 @@ pub fn main() !void {
 
     const shaderProgram = loadShaders();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    //var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //defer _ = gpa.deinit();
+    //const allocator = gpa.allocator();
+    //_ = allocator;
 
-    try create(allocator, window);
+    //try create(allocator, window);
 
-    var vertices = [24]gl.GLfloat{
+    var vertices = [_]gl.GLfloat{
         -0.5, -0.5, -0.5,
         0.5,  -0.5, -0.5,
         0.5,  0.5,  -0.5,
@@ -179,7 +174,7 @@ pub fn main() !void {
         -0.5, 0.5,  0.5,
     };
 
-    var indices = [36]gl.GLuint{
+    var indices = [_]gl.GLuint{
         0, 1, 2, 2, 3, 0,
         4, 5, 6, 6, 7, 4,
         0, 1, 5, 5, 4, 0,
@@ -213,13 +208,13 @@ pub fn main() !void {
     while (!window.shouldClose()) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        if (window.getKey(.space) == .press) {
-            const angle = @as(f32, @floatCast(glfw.getTime()));
-            const rotX = zmath.rotationX(angle);
-            const rotY = zmath.rotationY(angle);
-            const rotMatrix = zmath.matToArr(zmath.mul(rotY, rotX));
-            gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "transform"), 1, gl.FALSE, &rotMatrix);
-        }
+        //if (window.getKey(.space) == .press) {
+        const angle = @as(f32, @floatCast(glfw.getTime()));
+        const rotX = zmath.rotationX(angle);
+        const rotY = zmath.rotationY(angle);
+        const rotMatrix = zmath.matToArr(zmath.mul(rotY, rotX));
+        gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, "transform"), 1, gl.FALSE, &rotMatrix);
+        //}
 
         gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
 
