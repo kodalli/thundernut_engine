@@ -46,9 +46,7 @@ fn setupWindow() !*glfw.Window {
     glfw.windowHintTyped(.client_api, .opengl_api);
     glfw.windowHintTyped(.doublebuffer, true);
 
-    const window = try glfw.Window.create(640, 480, "ThunderNut Engine", null);
-
-    return window;
+    return try glfw.Window.create(640, 480, "ThunderNut Engine", null);
 }
 
 const Vertex = struct {
@@ -70,7 +68,8 @@ fn appendMesh(
     meshes: *std.ArrayList(Mesh),
     meshes_indices: *std.ArrayList(Mesh.IndexType),
     meshes_positions: *std.ArrayList([3]f32),
-    meshes_normals_or_colors: *std.ArrayList([3]f32),
+    meshes_normals: *std.ArrayList([3]f32),
+    meshes_texcoords: *std.ArrayList([2]f32),
 ) void {
     meshes.append(.{
         .index_offset = @as(u32, @intCast(meshes_indices.items.len)),
@@ -81,7 +80,8 @@ fn appendMesh(
 
     meshes_indices.appendSlice(mesh.indices) catch unreachable;
     meshes_positions.appendSlice(mesh.positions) catch unreachable;
-    meshes_normals_or_colors.appendSlice(mesh.normals.?) catch unreachable;
+    meshes_normals.appendSlice(mesh.normals.?) catch unreachable;
+    meshes_texcoords.appendSlice(mesh.texcoords.?) catch unreachable;
 }
 
 fn generateMeshes(
@@ -90,6 +90,7 @@ fn generateMeshes(
     meshes_indices: *std.ArrayList(Mesh.IndexType),
     meshes_positions: *std.ArrayList([3]f32),
     meshes_normals: *std.ArrayList([3]f32),
+    meshes_texcoords: *std.ArrayList([2]f32),
 ) void {
     var arena_state = std.heap.ArenaAllocator.init(allocator);
     defer arena_state.deinit();
@@ -105,7 +106,9 @@ fn generateMeshes(
         cube.unweld();
         cube.computeNormals();
 
-        appendMesh(cube, meshes, meshes_indices, meshes_positions, meshes_normals);
+        std.log.info("cube has texcoords: {}", .{cube.texcoords.?.len});
+
+        appendMesh(cube, meshes, meshes_indices, meshes_positions, meshes_normals, meshes_texcoords);
     }
 }
 
@@ -119,7 +122,8 @@ fn create(allocator: std.mem.Allocator, window: *glfw.Window) !void {
     var meshes_indices = std.ArrayList(Mesh.IndexType).init(arena);
     var meshes_positions = std.ArrayList([3]f32).init(arena);
     var meshes_normals = std.ArrayList([3]f32).init(arena);
-    generateMeshes(allocator, &meshes, &meshes_indices, &meshes_positions, &meshes_normals);
+    var meshes_texcoords = std.ArrayList([2]f32).init(arena);
+    generateMeshes(allocator, &meshes, &meshes_indices, &meshes_positions, &meshes_normals, &meshes_texcoords);
 
     const total_num_vertices = @as(u32, @intCast(meshes_positions.items.len));
     _ = total_num_vertices;
@@ -134,7 +138,18 @@ pub fn main() !void {
     };
     defer glfw.terminate();
 
-    const window = try setupWindow();
+    //const window = try setupWindow();
+    const gl_major = 4;
+    const gl_minor = 0;
+
+    glfw.windowHintTyped(.context_version_major, gl_major);
+    glfw.windowHintTyped(.context_version_minor, gl_minor);
+    glfw.windowHintTyped(.opengl_profile, .opengl_core_profile);
+    glfw.windowHintTyped(.opengl_forward_compat, true);
+    glfw.windowHintTyped(.client_api, .opengl_api);
+    glfw.windowHintTyped(.doublebuffer, true);
+
+    const window = try glfw.Window.create(640, 480, "ThunderNut Engine", null);
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
@@ -146,24 +161,12 @@ pub fn main() !void {
     gl.enable(gl.DEPTH_TEST);
 
     const shaderProgram = loadShaders();
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-
     const allocator = gpa.allocator();
-    var arena_state = std.heap.ArenaAllocator.init(allocator);
-    defer arena_state.deinit();
-    const arena = arena_state.allocator();
 
-    var meshes = std.ArrayList(Mesh).init(allocator);
-    var meshes_indices = std.ArrayList(Mesh.IndexType).init(arena);
-    var meshes_positions = std.ArrayList([3]f32).init(arena);
-    var meshes_normals = std.ArrayList([3]f32).init(arena);
-    generateMeshes(allocator, &meshes, &meshes_indices, &meshes_positions, &meshes_normals);
-
-    const total_num_vertices = @as(u32, @intCast(meshes_positions.items.len));
-    _ = total_num_vertices;
-    const total_num_indices = @as(u32, @intCast(meshes_indices.items.len));
-    _ = total_num_indices;
+    try create(allocator, window);
 
     var vertices = [24]gl.GLfloat{
         -0.5, -0.5, -0.5,
