@@ -147,6 +147,8 @@ fn create(allocator: std.mem.Allocator) !prim.Mesh {
     std.log.info("meshes normals len: {}", .{meshes_normals.items.len});
     std.log.info("meshes texcoords len: {}", .{meshes_texcoords.items.len});
 
+    std.log.debug("\nmesh indices: {any}\n", .{meshes_indices.items});
+
     const total_num_vertices = @as(u32, @intCast(meshes_positions.items.len));
     const total_num_indices = @as(u32, @intCast(meshes_indices.items.len));
 
@@ -155,18 +157,19 @@ fn create(allocator: std.mem.Allocator) !prim.Mesh {
     var index: usize = 0;
     for (meshes_positions.items, meshes_normals.items, meshes_texcoords.items) |pos, norm, uv| {
         const vertex_data = pos ++ norm ++ uv;
-        std.mem.copy(f32, vertices[index..][0..8], &vertex_data);
+        std.mem.copyForwards(f32, vertices[index..][0..8], &vertex_data);
         index += 8;
     }
 
     var indices = try allocator.alloc(gl.GLuint, total_num_indices);
     defer allocator.free(indices);
-    index = 0;
-    for (meshes_indices.items) |ind| {
-        indices[index] = ind;
+    for (meshes_indices.items, 0..total_num_indices) |ind, i| {
+        indices[i] = ind;
     }
 
-    var mesh = prim.Mesh.init(vertices, indices);
+    std.log.debug("vertices: {any} \nindices: {any}", .{ vertices, indices });
+
+    var mesh = try prim.Mesh.init(allocator, vertices, indices);
 
     return mesh;
 }
@@ -221,10 +224,4 @@ fn run() !void {
         window.swapBuffers();
         glfw.pollEvents();
     }
-}
-
-test "leak" {
-    var gpa = std.testing.allocator;
-    defer _ = gpa.deinit();
-    try create(gpa);
 }
