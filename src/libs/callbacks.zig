@@ -3,7 +3,7 @@ const glfw = @import("zglfw");
 const log = std.log.scoped(.input);
 const gl = @import("gl");
 
-pub fn initCallbackHandler(window: *glfw.Window) void {
+pub fn initCallbackHandler(window: *glfw.Window, allocator: std.mem.Allocator) void {
     _ = window.setContentScaleCallback(contentScaleCallback);
     _ = window.setFramebufferSizeCallback(framebufferSizeCallback);
     _ = window.setSizeCallback(sizeCallback);
@@ -12,6 +12,14 @@ pub fn initCallbackHandler(window: *glfw.Window) void {
     _ = window.setMouseButtonCallback(mouseButtonCallback);
     _ = window.setKeyCallback(keyCallback);
     _ = window.setScrollCallback(scrollCallback);
+
+    input = InputActions{
+        .callbacks = std.ArrayList(InputActionCallback).init(allocator),
+    };
+}
+
+pub fn deinitCallbackHandler() void {
+    input.callbacks.deinit();
 }
 
 pub fn contentScaleCallback(window: *glfw.Window, xscale: f32, yscale: f32) callconv(.C) void {
@@ -56,30 +64,41 @@ pub fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv
     log.debug("scroll action xoffset:{} yoffset:{}\n", .{ xoffset, yoffset });
 }
 
+pub const InputActionCallback = *const fn (input: *InputActions) void;
+
 pub const InputActions = struct {
     movement: [2]f32 = .{ 0, 0 },
-};
+    callbacks: std.ArrayList(InputActionCallback),
 
-pub var input = InputActions{};
+    pub fn updateMovement(self: *InputActions, key: glfw.Key, action: glfw.Action) void {
+        const isPressedOrRepeated = action == .press or action == .repeat;
 
-fn handleInput(key: glfw.Key, action: glfw.Action) void {
-    const isPressedOrRepeated = action == .press or action == .repeat;
+        switch (key) {
+            .w => self.movement[1] = if (isPressedOrRepeated) 1 else if (self.movement[1] > 0) 0 else self.movement[1],
+            .s => self.movement[1] = if (isPressedOrRepeated) -1 else if (self.movement[1] < 0) 0 else self.movement[1],
+            .a => self.movement[0] = if (isPressedOrRepeated) -1 else if (self.movement[0] > 0) 0 else self.movement[1],
+            .d => self.movement[0] = if (isPressedOrRepeated) 1 else if (self.movement[0] < 0) 0 else self.movement[1],
+            else => {}, // No action for other keys
+        }
 
-    switch (key) {
-        .w => input.movement[1] = if (isPressedOrRepeated) 1 else 0,
-        .s => input.movement[1] = if (isPressedOrRepeated) -1 else 0,
-        .a => input.movement[0] = if (isPressedOrRepeated) -1 else 0,
-        .d => input.movement[0] = if (isPressedOrRepeated) 1 else 0,
-        else => {}, // No action for other keys
+        std.log.debug("input: {any}", .{input.movement});
+
+        for (self.callbacks.items) |callback| {
+            callback(self);
+        }
     }
 
-    std.log.debug("input: {any}", .{input.movement});
-}
+    pub fn addCallback(self: *InputActions, callback: InputActionCallback) !void {
+        try self.callbacks.append(callback);
+    }
+};
+
+pub var input: InputActions = undefined;
 
 pub fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = window;
     _ = scancode;
     _ = mods;
-    handleInput(key, action);
+    input.updateMovement(key, action);
     log.debug("{} {}\n", .{ key, action });
 }

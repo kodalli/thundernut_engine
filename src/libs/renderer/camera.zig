@@ -19,18 +19,16 @@ pub const Camera = struct {
         };
     }
 
-    pub fn perspectiveMatrix(self: *Camera, size: [2]i32) [16]f32 {
+    pub fn perspectiveMatrix(self: *Camera, size: [2]i32) zmath.Mat {
         const width = @as(f32, @floatFromInt(size[0]));
         const height = @as(f32, @floatFromInt(size[1]));
         const aspect = width / height;
-        const perspective = zmath.perspectiveFovRh(self.fov, aspect, self.nearPlane, self.farPlane);
-        const perspectiveMat = zmath.matToArr(perspective);
+        const perspectiveMat = zmath.perspectiveFovRh(self.fov, aspect, self.nearPlane, self.farPlane);
         return perspectiveMat;
     }
 
-    pub fn viewMatrix(self: *Camera) [16]f32 {
-        const view = zmath.lookAtRh(self.cameraPos, self.targetPos, self.upDirection);
-        const viewMat = zmath.matToArr(view);
+    pub fn viewMatrix(self: *Camera) zmath.Mat {
+        const viewMat = zmath.lookAtRh(self.cameraPos, self.targetPos, self.upDirection);
         return viewMat;
     }
 };
