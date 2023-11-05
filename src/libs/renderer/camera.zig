@@ -2,8 +2,9 @@ const zmath = @import("zmath");
 
 pub const Camera = struct {
     cameraPos: zmath.Vec,
-    targetPos: zmath.Vec,
+    //targetPos: zmath.Vec,
     upDirection: zmath.Vec,
+    cameraOrientation: zmath.Quat,
     fov: f32,
     nearPlane: f32,
     farPlane: f32,
@@ -11,8 +12,9 @@ pub const Camera = struct {
     pub fn init(x: f32, y: f32, z: f32) Camera {
         return .{
             .cameraPos = zmath.f32x4(x, y, z, 1),
-            .targetPos = zmath.f32x4(0, 0, 0, 1),
+            //.targetPos = zmath.f32x4(0, 0, 0, 1),
             .upDirection = zmath.f32x4(0, 1, 0, 1),
+            .cameraOrientation = zmath.qidentity(),
             .fov = 70,
             .nearPlane = 1.0,
             .farPlane = 1000,
@@ -27,8 +29,14 @@ pub const Camera = struct {
         return perspectiveMat;
     }
 
+    pub fn forwardDir(self: *Camera) zmath.Vec {
+        const viewRotationMatrix = zmath.matFromQuat(self.cameraOrientation);
+        var forward = viewRotationMatrix[2];
+        forward[3] = 1;
+        return forward;
+    }
+
     pub fn viewMatrix(self: *Camera) zmath.Mat {
-        const viewMat = zmath.lookAtRh(self.cameraPos, self.targetPos, self.upDirection);
-        return viewMat;
+        return zmath.lookToRh(self.cameraPos, self.forwardDir(), self.upDirection);
     }
 };

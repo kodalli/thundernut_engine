@@ -45,12 +45,15 @@ var lastTime: f64 = 0;
 const speed = 50;
 
 pub fn updateCamera(inputActions: *callbacks.InputActions) void {
-    const timeScale = @as(f32, @floatCast(deltaTime)) * speed;
-    const x = (inputActions.movement[0] * timeScale) + camera.cameraPos[0];
-    const y = (inputActions.movement[1] * timeScale) + camera.cameraPos[1];
+    const timeScale = @as(f32, @floatCast(deltaTime));
+    const speedScale = timeScale * speed;
+    const x = -(inputActions.movement[0] * speedScale) + camera.cameraPos[0];
+    const y = (inputActions.movement[1] * speedScale) + camera.cameraPos[1];
     const z = camera.cameraPos[2];
     const w = camera.cameraPos[3];
-    camera.cameraPos = .{ 0, y, x + z, w };
+    //const prev = camera.cameraPos;
+    camera.cameraPos = .{ x, y, z, w };
+    //camera.cameraPos = zmath.lerp(prev, camera.cameraPos, speedScale);
     viewMat = camera.viewMatrix();
     std.log.debug("delta time: {}", .{deltaTime});
     std.log.debug("cameraPos: {any}", .{camera.cameraPos});
