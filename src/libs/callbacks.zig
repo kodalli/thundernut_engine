@@ -1,6 +1,7 @@
 const std = @import("std");
 const glfw = @import("zglfw");
 const log = std.log.scoped(.input);
+const gl = @import("gl");
 
 pub fn initCallbackHandler(window: *glfw.Window) void {
     _ = window.setContentScaleCallback(contentScaleCallback);
@@ -21,9 +22,9 @@ pub fn contentScaleCallback(window: *glfw.Window, xscale: f32, yscale: f32) call
 }
 
 pub fn framebufferSizeCallback(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {
-    _ = height;
-    _ = width;
     _ = window;
+
+    gl.viewport(0, 0, width, height);
 }
 
 pub fn sizeCallback(window: *glfw.Window, width: i32, height: i32) callconv(.C) void {

@@ -180,7 +180,7 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
     std.log.info("meshes normals len: {}", .{meshes_normals.items.len});
     std.log.info("meshes texcoords len: {}", .{meshes_texcoords.items.len});
 
-    std.log.debug("\nmesh indices: {any}\n", .{meshes_indices.items});
+    //std.log.debug("\nmesh indices: {any}\n", .{meshes_indices.items});
 
     const total_num_vertices = @as(u32, @intCast(meshes_positions.items.len));
     const total_num_indices = @as(u32, @intCast(meshes_indices.items.len));
@@ -200,7 +200,7 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
         indices[i] = ind;
     }
 
-    std.log.debug("vertices: {any} \nindices: {any}", .{ vertices, indices });
+    //std.log.debug("vertices: {any} \nindices: {any}", .{ vertices, indices });
 
     var mesh = try Mesh.init(allocator, vertices, indices);
 

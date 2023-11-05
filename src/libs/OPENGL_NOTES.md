@@ -37,3 +37,12 @@ If you have multiple instances of same obj type like prefabs of same geometry, s
 4. Cylinder
 5. Plane
 6. Quad
+
+### Uniform Buffer Objects (UBO)
+
+- If the unifomrs are part of a block and odn't change b/w draws, can use a UBO to set mutliple uniforms at once
+- Upload data once to the bufer then bind that buffer to the shader
+
+### Shader Storage Buffer Objects (SSBO)
+
+- For dynamic data
