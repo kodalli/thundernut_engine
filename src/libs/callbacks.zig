@@ -12,7 +12,6 @@ pub fn initCallbackHandler(window: *glfw.Window) void {
     _ = window.setMouseButtonCallback(mouseButtonCallback);
     _ = window.setKeyCallback(keyCallback);
     _ = window.setScrollCallback(scrollCallback);
-    _ = window.setKeyCallback(keyCallback);
 }
 
 pub fn contentScaleCallback(window: *glfw.Window, xscale: f32, yscale: f32) callconv(.C) void {
@@ -57,10 +56,30 @@ pub fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv
     log.debug("scroll action xoffset:{} yoffset:{}\n", .{ xoffset, yoffset });
 }
 
+pub const InputActions = struct {
+    movement: [2]f32 = .{ 0, 0 },
+};
+
+pub var input = InputActions{};
+
+fn handleInput(key: glfw.Key, action: glfw.Action) void {
+    const isPressedOrRepeated = action == .press or action == .repeat;
+
+    switch (key) {
+        .w => input.movement[1] = if (isPressedOrRepeated) 1 else 0,
+        .s => input.movement[1] = if (isPressedOrRepeated) -1 else 0,
+        .a => input.movement[0] = if (isPressedOrRepeated) -1 else 0,
+        .d => input.movement[0] = if (isPressedOrRepeated) 1 else 0,
+        else => {}, // No action for other keys
+    }
+
+    std.log.debug("input: {any}", .{input.movement});
+}
+
 pub fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = window;
     _ = scancode;
     _ = mods;
-
+    handleInput(key, action);
     log.debug("{} {}\n", .{ key, action });
 }
