@@ -113,7 +113,7 @@ fn run() !void {
     const modelLoc = gl.getUniformLocation(shaderProgram, "modelViewProjection");
 
     const translationMat1 = zmath.translation(2, 2, 2);
-    const translationMat2 = zmath.translation(2, 2, 2);
+    const translationMat2 = zmath.translation(0, 0, 0);
 
     while (!window.shouldClose()) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
