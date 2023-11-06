@@ -2,6 +2,7 @@ const std = @import("std");
 const glfw = @import("zglfw");
 const log = std.log.scoped(.input);
 const gl = @import("gl");
+const zmath = @import("zmath");
 
 pub fn initCallbackHandler(window: *glfw.Window, allocator: std.mem.Allocator) void {
     _ = window.setContentScaleCallback(contentScaleCallback);
@@ -66,26 +67,36 @@ pub fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv
 
 pub const InputActionCallback = *const fn (input: *InputActions) void;
 
+inline fn enumToFloat(window: *glfw.Window, key: glfw.Key) f32 {
+    return @as(f32, @floatFromInt(@intFromEnum(window.getKey(key))));
+}
+
 pub const InputActions = struct {
-    movement: [2]f32 = .{ 0, 0 },
+    movement: @Vector(2, f32) = @splat(0),
     callbacks: std.ArrayList(InputActionCallback),
 
-    pub fn updateMovement(self: *InputActions, key: glfw.Key, action: glfw.Action) void {
-        const isPressedOrRepeated = action == .press or action == .repeat;
-
-        switch (key) {
-            .w => self.movement[1] = if (isPressedOrRepeated) 1 else if (self.movement[1] > 0) 0 else self.movement[1],
-            .s => self.movement[1] = if (isPressedOrRepeated) -1 else if (self.movement[1] < 0) 0 else self.movement[1],
-            .a => self.movement[0] = if (isPressedOrRepeated) -1 else if (self.movement[0] > 0) 0 else self.movement[1],
-            .d => self.movement[0] = if (isPressedOrRepeated) 1 else if (self.movement[0] < 0) 0 else self.movement[1],
-            else => {}, // No action for other keys
-        }
+    pub fn updateMovement(self: *InputActions, window: *glfw.Window) void {
+        const w = enumToFloat(window, glfw.Key.w);
+        const a = enumToFloat(window, glfw.Key.a);
+        const s = enumToFloat(window, glfw.Key.s);
+        const d = enumToFloat(window, glfw.Key.d);
+        const inputVector = zmath.f32x4(w, a, s, d);
+        const axisX = zmath.f32x4(0, -1, 0, 1);
+        const axisY = zmath.f32x4(1, 0, -1, 0);
+        const dotX = zmath.dot4(inputVector, axisX);
+        const dotY = zmath.dot4(inputVector, axisY);
+        const mask = @Vector(2, f32){ 0, -1 };
+        const axis = @shuffle(f32, dotX, dotY, mask);
+        const min = @Vector(2, f32){ -1, -1 };
+        const max = @Vector(2, f32){ 1, 1 };
+        self.movement = zmath.clampFast(axis, min, max);
 
         std.log.debug("input: {any}", .{input.movement});
 
-        for (self.callbacks.items) |callback| {
-            callback(self);
-        }
+        //for (self.callbacks.items) |callback| {
+        //    callback(self);
+        //    std.log.debug("callback!", .{});
+        //}
     }
 
     pub fn addCallback(self: *InputActions, callback: InputActionCallback) !void {
@@ -99,6 +110,6 @@ pub fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: g
     _ = window;
     _ = scancode;
     _ = mods;
-    input.updateMovement(key, action);
+    //input.updateMovement(key, action);
     log.debug("{} {}\n", .{ key, action });
 }

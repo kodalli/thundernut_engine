@@ -37,16 +37,19 @@ pub const Mesh = struct {
     vao: gl.GLuint,
     vbo: gl.GLuint,
     ebo: gl.GLuint,
-    vertexCount: usize,
-    indexCount: usize,
+    vertexCount: gl.GLsizei,
+    indexCount: gl.GLsizei,
 
     pub fn init(allocator: std.mem.Allocator, vertices: []const f32, indices: []const gl.GLuint) !Mesh {
+        std.debug.assert(vertices.len < std.math.maxInt(gl.GLsizei));
+        std.debug.assert(indices.len < std.math.maxInt(gl.GLsizei));
+
         var mesh = Mesh{
             .vao = undefined,
             .vbo = undefined,
             .ebo = undefined,
-            .vertexCount = vertices.len,
-            .indexCount = indices.len,
+            .vertexCount = @as(gl.GLsizei, @intCast(vertices.len)),
+            .indexCount = @as(gl.GLsizei, @intCast(indices.len)),
         };
 
         var mutVertices = try allocator.alloc(f32, vertices.len);
@@ -58,8 +61,8 @@ pub const Mesh = struct {
         std.mem.copyForwards(gl.GLuint, mutIndices, indices);
 
         const floatSize = @sizeOf(gl.GLfloat);
-        const vertexBufferSize = @as(gl.GLsizeiptr, @intCast(floatSize * vertices.len));
-        const indexBufferSize = @as(gl.GLsizeiptr, @intCast(@sizeOf(gl.GLuint) * indices.len));
+        const vertexBufferSize = @as(gl.GLsizeiptr, @intCast(floatSize * mesh.vertexCount));
+        const indexBufferSize = @as(gl.GLsizeiptr, @intCast(@sizeOf(gl.GLuint) * mesh.indexCount));
         const vertexSize = 8 * floatSize;
         const normalOffset = 3 * floatSize;
         const uvOffset = 6 * floatSize;
@@ -205,4 +208,12 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
     var mesh = try Mesh.init(allocator, vertices, indices);
 
     return mesh;
+}
+
+pub fn render(meshes: []const Mesh, modelArrays: std.ArrayList([16]f32), modelLoc: gl.GLint) void {
+    for (meshes, modelArrays.items) |mesh, modelArr| {
+        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArr);
+        gl.bindVertexArray(mesh.vao);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, null);
+    }
 }

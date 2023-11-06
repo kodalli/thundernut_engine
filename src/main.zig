@@ -65,6 +65,13 @@ inline fn updateDeltaTime(time: f64) void {
     lastTime = time;
 }
 
+inline fn modelViewProjectionArr(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) [16]f32 {
+    const transformMat = zmath.mul(rotation, translation);
+    const res = zmath.mul(transformMat, viewProjMat);
+    const modelArray = zmath.matToArr(res);
+    return modelArray;
+}
+
 fn run() !void {
     glfw.init() catch {
         std.log.err("Failed to initialize GLFW library.", .{});
@@ -91,6 +98,7 @@ fn run() !void {
     const allocator = gpa.allocator();
 
     var mesh = try renderer.createMesh(allocator);
+    const meshes = [_]renderer.Mesh{ mesh, mesh };
     defer mesh.deinit();
 
     callbacks.initCallbackHandler(window, allocator);
@@ -104,24 +112,34 @@ fn run() !void {
 
     const modelLoc = gl.getUniformLocation(shaderProgram, "modelViewProjection");
 
+    const translationMat1 = zmath.translation(2, 2, 2);
+    const translationMat2 = zmath.translation(2, 2, 2);
+
     while (!window.shouldClose()) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const time = glfw.getTime();
         updateDeltaTime(time);
+        callbacks.input.updateMovement(window);
         updateCamera(&callbacks.input);
 
         const angle = @as(f32, @floatCast(time));
         const rotX = zmath.rotationX(angle);
         const rotY = zmath.rotationY(angle);
-        const rotXY = zmath.mul(rotY, rotX);
-        const translate = zmath.translation(2, 2, 2);
-        const transformMat = zmath.mul(rotXY, translate);
-        const res = zmath.mul(transformMat, zmath.mul(viewMat, projectionMat));
-        const modelMat = zmath.matToArr(res);
-        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelMat);
+        const rotationMat = zmath.mul(rotY, rotX);
 
-        gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
+        const viewProjMat = zmath.mul(viewMat, projectionMat);
+        const modelArray1 = modelViewProjectionArr(translationMat1, rotationMat, viewProjMat);
+        const modelArray2 = modelViewProjectionArr(translationMat2, rotationMat, viewProjMat);
+        var modelArrays = std.ArrayList([16]f32).init(allocator);
+        defer modelArrays.deinit();
+        try modelArrays.append(modelArray1);
+        try modelArrays.append(modelArray2);
+
+        //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArray);
+
+        renderer.render(&meshes, modelArrays, modelLoc);
+        //gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
 
         window.swapBuffers();
         glfw.pollEvents();
