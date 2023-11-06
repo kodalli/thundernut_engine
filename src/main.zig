@@ -42,21 +42,22 @@ var camera = cam.Camera.init(0, 0, -10);
 var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
-const speed = 50;
+const cameraSpeed = 15;
+const playerSpeed = 100;
 
-pub fn updateCamera(inputActions: *callbacks.InputActions) void {
+pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const timeScale = @as(f32, @floatCast(deltaTime));
-    const speedScale = timeScale * speed;
+    const speedScale = timeScale * playerSpeed;
     const x = -(inputActions.movement[0] * speedScale) + camera.cameraPos[0];
     const y = (inputActions.movement[1] * speedScale) + camera.cameraPos[1];
     const z = camera.cameraPos[2];
     const w = camera.cameraPos[3];
-    //const prev = camera.cameraPos;
-    camera.cameraPos = .{ x, y, z, w };
-    //camera.cameraPos = zmath.lerp(prev, camera.cameraPos, speedScale);
+    const prev = camera.cameraPos;
+    const newPos: zmath.Vec = .{ x, y, z, w };
+    camera.cameraPos = zmath.lerp(prev, newPos, timeScale * cameraSpeed);
     viewMat = camera.viewMatrix();
-    std.log.debug("delta time: {}", .{deltaTime});
-    std.log.debug("cameraPos: {any}", .{camera.cameraPos});
+    //std.log.debug("delta time: {}", .{deltaTime});
+    //std.log.debug("cameraPos: {any}", .{camera.cameraPos});
 }
 
 inline fn updateDeltaTime(time: f64) void {
@@ -94,7 +95,7 @@ fn run() !void {
 
     callbacks.initCallbackHandler(window, allocator);
     defer callbacks.deinitCallbackHandler();
-    try callbacks.input.addCallback(updateCamera);
+    //try callbacks.input.addCallback(updateCamera);
 
     const projectionMat = camera.perspectiveMatrix(window.getSize());
     viewMat = camera.viewMatrix();
@@ -108,6 +109,7 @@ fn run() !void {
 
         const time = glfw.getTime();
         updateDeltaTime(time);
+        updateCamera(&callbacks.input);
 
         const angle = @as(f32, @floatCast(time));
         const rotX = zmath.rotationX(angle);
