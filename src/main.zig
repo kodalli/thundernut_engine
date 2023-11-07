@@ -43,26 +43,33 @@ var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
 const cameraSpeed = 15;
+const mouseSpeed = 0.03;
 const playerSpeed = 80;
 
 pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const timeScale = @as(f32, @floatCast(deltaTime));
     const speedScale = timeScale * playerSpeed;
     const x = (inputActions.movement[0] * speedScale) + camera.cameraPos[0];
-    const y = (inputActions.movement[1] * speedScale) + camera.cameraPos[1];
-    const z = camera.cameraPos[2];
+    const z = (inputActions.movement[1] * speedScale) + camera.cameraPos[2];
+    const y = camera.cameraPos[1];
     const w = camera.cameraPos[3];
     const prev = camera.cameraPos;
-    const newPos: zmath.Vec = .{ x, y, z, w };
+    const input: zmath.Vec = .{ x, y, z, w };
+    // const forward = camera.forwardDir();
+    // const proj = zmath.dot3(input, forward) / zmath.length3(forward);
+    // var newPos = input * proj;
+    // newPos[3] = 1;
     const cameraScale = timeScale * cameraSpeed;
-    camera.cameraPos = zmath.lerp(prev, newPos, cameraScale);
+    camera.cameraPos = zmath.lerp(prev, input, cameraScale);
 
-    const pitch = @as(f32, @floatCast(inputActions.mouseDirection[1]));
-    const yaw = @as(f32, @floatCast(inputActions.mouseDirection[0]));
-    const prevRotation = camera.cameraOrientation;
-    const newRotation = zmath.quatFromRollPitchYaw(pitch, yaw, 0);
-    camera.cameraOrientation = zmath.slerp(prevRotation, newRotation, cameraScale * 0.5);
-
+    if (!inputActions.isMouseCenter) {
+        const pitch = inputActions.mouseDirection[1];
+        const yaw = inputActions.mouseDirection[0];
+        const prevRotation = camera.cameraOrientation;
+        // const rotation = zmath.quatFromRollPitchYaw(pitch, yaw, 0);
+        const rotation: zmath.Vec = .{ -pitch, yaw, 0, 1 };
+        camera.cameraOrientation = zmath.slerp(prevRotation, rotation, cameraScale * mouseSpeed);
+    }
     viewMat = camera.viewMatrix();
     //std.log.debug("delta time: {}", .{deltaTime});
     //std.log.debug("cameraPos: {any}", .{camera.cameraPos});
@@ -74,7 +81,9 @@ inline fn updateDeltaTime(time: f64) void {
 }
 
 inline fn modelViewProjectionArr(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) [16]f32 {
-    const transformMat = zmath.mul(rotation, translation);
+    _ = rotation;
+    // const transformMat = zmath.mul(rotation, translation);
+    const transformMat = translation;
     const res = zmath.mul(transformMat, viewProjMat);
     const modelArray = zmath.matToArr(res);
     return modelArray;
@@ -123,6 +132,9 @@ fn run() !void {
     const translationMat1 = zmath.translation(2, 2, 2);
     const translationMat2 = zmath.translation(0, 0, 0);
 
+    var modelArrays = std.ArrayList([16]f32).init(allocator);
+    defer modelArrays.deinit();
+
     while (!window.shouldClose()) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -139,14 +151,13 @@ fn run() !void {
         const viewProjMat = zmath.mul(viewMat, projectionMat);
         const modelArray1 = modelViewProjectionArr(translationMat1, rotationMat, viewProjMat);
         const modelArray2 = modelViewProjectionArr(translationMat2, rotationMat, viewProjMat);
-        var modelArrays = std.ArrayList([16]f32).init(allocator);
-        defer modelArrays.deinit();
         try modelArrays.append(modelArray1);
         try modelArrays.append(modelArray2);
 
         //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArray);
 
         renderer.render(&meshes, modelArrays, modelLoc);
+        modelArrays.clearAndFree();
         //gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
 
         window.swapBuffers();
