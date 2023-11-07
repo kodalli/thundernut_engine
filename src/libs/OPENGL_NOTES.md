@@ -46,3 +46,63 @@ If you have multiple instances of same obj type like prefabs of same geometry, s
 ### Shader Storage Buffer Objects (SSBO)
 
 - For dynamic data
+
+### Renderer
+
+#### Forward Renderer
+- Does all material/lighting calculations in single pass
+- Clustered Forward / Forward + renderer
+  - Break view frustum into clusters
+  - Assign lights to clusters
+  - Can get more lights than traditional forward renderer
+- MSAA works
+
+### Deferred Renderer
+- One or more pre-passes to collect relevant info on scene
+- Do material/lighting calculation in screen space in final pass after
+- Cuts down on shading cost by only shading visible fragments, more lights in scene
+- More complicated
+- Can be more expensive than equivalent forward renderer in some situations
+- Use more texture bandwidth
+- No MSAA
+- Transparency is harder/less straightforward to do
+
+### GPU Driven Rendering
+- CPU normal makes bind calls and draw calls for each entity
+- For each data type (meshes, materials, transforms, textures) create single array with all data of that datatype and bind these arrays once to avoid per entity/pre draw rebinds
+
+### Pipelined Rendering
+- Extract data from "main world" into separate "render world"
+- Randers frame N in the render app, while main app simulates frame N+1
+- Clear all entities b/w frames, enables consistent entity mapping b/w main and render worlds, while still being able to spawn new entities in the render world that don't exist in the main world
+- Problem is that significant archetype moves and copies because using table
+- Solution to switch to EntityHashMap
+
+
+### Shadows
+
+#### PCF Shadow Fitlering 
+- Percentage-Close Filtering
+  - Take multiple samples from shadow map
+  - Compare w/ an interpolated mesh surface depth-projected into the frame of reference light
+  - Calculates percentage of sampels in the depth buffer that are closer to the light than the mesh surface
+- Essentially creates a blur effect, improves shadow quality
+- Lets you use low res shadow maps
+
+#### Shadow Map Filter by Jimenez14
+- Cheaper than Castano but can flicker
+- Need Temporal Anit-Aliasing (TAA) to reduce flicker
+- Bends shadow cascades more smoothly than Castano
+
+### Transparency
+ - glFrontFace, GL_CCW
+ - glEnable, glDisable with arg GL_CULL_FACE
+
+### Batching / Instancing
+- Entities w/ same material and mesh can be batched
+- Things that don't need to rebind won't incur runtime cost
+- If pipeline (shaders), bind group (shader-accessible bound data), vertex/index buffer (mesh) is different, it can't be batched
+
+- very close/overlap objects
+- near 0.1f
+- far 10.0f
