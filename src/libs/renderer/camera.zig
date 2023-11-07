@@ -16,8 +16,8 @@ pub const Camera = struct {
             .upDirection = zmath.f32x4(0, 1, 0, 1),
             .cameraOrientation = zmath.qidentity(),
             .fov = 70,
-            .nearPlane = 1.0,
-            .farPlane = 1000,
+            .nearPlane = 0.1,
+            .farPlane = 10,
         };
     }
 
@@ -25,7 +25,7 @@ pub const Camera = struct {
         const width = @as(f32, @floatFromInt(size[0]));
         const height = @as(f32, @floatFromInt(size[1]));
         const aspect = width / height;
-        const perspectiveMat = zmath.perspectiveFovRh(self.fov, aspect, self.nearPlane, self.farPlane);
+        const perspectiveMat = zmath.perspectiveFovLh(self.fov, aspect, self.nearPlane, self.farPlane);
         return perspectiveMat;
     }
 
@@ -37,6 +37,6 @@ pub const Camera = struct {
     }
 
     pub fn viewMatrix(self: *Camera) zmath.Mat {
-        return zmath.lookToRh(self.cameraPos, self.forwardDir(), self.upDirection);
+        return zmath.lookToLh(self.cameraPos, self.forwardDir(), self.upDirection);
     }
 };

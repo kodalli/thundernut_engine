@@ -38,23 +38,31 @@ pub fn main() !void {
     try run();
 }
 
-var camera = cam.Camera.init(0, 0, -10);
+var camera = cam.Camera.init(0, 0, -7);
 var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
 const cameraSpeed = 15;
-const playerSpeed = 100;
+const playerSpeed = 80;
 
 pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const timeScale = @as(f32, @floatCast(deltaTime));
     const speedScale = timeScale * playerSpeed;
-    const x = -(inputActions.movement[0] * speedScale) + camera.cameraPos[0];
+    const x = (inputActions.movement[0] * speedScale) + camera.cameraPos[0];
     const y = (inputActions.movement[1] * speedScale) + camera.cameraPos[1];
     const z = camera.cameraPos[2];
     const w = camera.cameraPos[3];
     const prev = camera.cameraPos;
     const newPos: zmath.Vec = .{ x, y, z, w };
-    camera.cameraPos = zmath.lerp(prev, newPos, timeScale * cameraSpeed);
+    const cameraScale = timeScale * cameraSpeed;
+    camera.cameraPos = zmath.lerp(prev, newPos, cameraScale);
+
+    const pitch = @as(f32, @floatCast(inputActions.mouseDirection[1]));
+    const yaw = @as(f32, @floatCast(inputActions.mouseDirection[0]));
+    const prevRotation = camera.cameraOrientation;
+    const newRotation = zmath.quatFromRollPitchYaw(pitch, yaw, 0);
+    camera.cameraOrientation = zmath.slerp(prevRotation, newRotation, cameraScale * 0.5);
+
     viewMat = camera.viewMatrix();
     //std.log.debug("delta time: {}", .{deltaTime});
     //std.log.debug("cameraPos: {any}", .{camera.cameraPos});

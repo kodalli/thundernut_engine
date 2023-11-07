@@ -73,6 +73,9 @@ inline fn enumToFloat(window: *glfw.Window, key: glfw.Key) f32 {
 
 pub const InputActions = struct {
     movement: @Vector(2, f32) = @splat(0),
+    mouseDirection: @Vector(2, f64) = @splat(0),
+    lastMousePosition: @Vector(2, f64) = @splat(0),
+    currentMousePosition: @Vector(2, f64) = @splat(0),
     callbacks: std.ArrayList(InputActionCallback),
 
     pub fn updateMovement(self: *InputActions, window: *glfw.Window) void {
@@ -92,6 +95,10 @@ pub const InputActions = struct {
         self.movement = zmath.clampFast(axis, min, max);
 
         std.log.debug("input: {any}", .{input.movement});
+
+        self.currentMousePosition = window.getCursorPos();
+        self.mouseDirection = self.currentMousePosition - self.lastMousePosition;
+        self.lastMousePosition = self.currentMousePosition;
 
         //for (self.callbacks.items) |callback| {
         //    callback(self);
