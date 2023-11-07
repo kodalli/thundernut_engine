@@ -67,6 +67,18 @@ If you have multiple instances of same obj type like prefabs of same geometry, s
 - No MSAA
 - Transparency is harder/less straightforward to do
 
+### GPU Driven Rendering
+- CPU normal makes bind calls and draw calls for each entity
+- For each data type (meshes, materials, transforms, textures) create single array with all data of that datatype and bind these arrays once to avoid per entity/pre draw rebinds
+
+### Pipelined Rendering
+- Extract data from "main world" into separate "render world"
+- Randers frame N in the render app, while main app simulates frame N+1
+- Clear all entities b/w frames, enables consistent entity mapping b/w main and render worlds, while still being able to spawn new entities in the render world that don't exist in the main world
+- Problem is that significant archetype moves and copies because using table
+- Solution to switch to EntityHashMap
+
+
 ### Shadows
 
 #### PCF Shadow Fitlering 
@@ -85,3 +97,12 @@ If you have multiple instances of same obj type like prefabs of same geometry, s
 ### Transparency
  - glFrontFace, GL_CCW
  - glEnable, glDisable with arg GL_CULL_FACE
+
+### Batching / Instancing
+- Entities w/ same material and mesh can be batched
+- Things that don't need to rebind won't incur runtime cost
+- If pipeline (shaders), bind group (shader-accessible bound data), vertex/index buffer (mesh) is different, it can't be batched
+
+- very close/overlap objects
+- near 0.1f
+- far 10.0f

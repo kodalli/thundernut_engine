@@ -80,5 +80,32 @@
   - Rendering after physics system to get updated positions
 
 **Events**
-- 
+- like unity, subscribe and listeners
 
+**One-Shot Systems**
+- Run arbitrary logic on demand, not every frame
+
+#### Sparse Set Implementation
+**Values**
+- Sparse array
+  - Holds indices of actual elements [2, 7, 9, ...] 
+- Dense array
+  - Stores actual set elements [0, 1, 2, ...]
+- N 
+  - Current number of elements
+- Capacity
+  - Capacity of set or size of dense array
+- MaxValue
+  - Max value in set or size of sparse array
+
+**Functions**
+- Search(x: int)
+  - If element present, return index of element in dense array else -1
+- Insert(x: int)
+  - Insert new element into set
+- Deletion(x: int)
+  - Deletes an element
+- Intersection(sparseSet) 
+  - Finds intersection of this set with s and returns pointer to result
+- SetUnion(sparseSet)
+  - Find union of two sets
