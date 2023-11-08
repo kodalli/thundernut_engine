@@ -54,10 +54,12 @@ pub fn cursorPosCallback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C
 }
 
 pub fn mouseButtonCallback(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = window;
-    _ = button;
     _ = mods;
     log.debug("mouse action {}\n", .{action});
+
+    if (button == .left and action == .press) {
+        window.setInputMode(.cursor, .disabled);
+    }
 }
 
 pub fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv(.C) void {
@@ -84,7 +86,7 @@ pub const InputActions = struct {
     callbacks: std.ArrayList(InputActionCallback),
     isMouseCenter: bool = true,
 
-    pub fn updateMovement(self: *InputActions, window: *glfw.Window) void {
+    pub fn updateInput(self: *InputActions, window: *glfw.Window) void {
         const w = enumToFloat(window, glfw.Key.w);
         const a = enumToFloat(window, glfw.Key.a);
         const s = enumToFloat(window, glfw.Key.s);
@@ -127,9 +129,12 @@ pub const InputActions = struct {
 pub var input: InputActions = undefined;
 
 pub fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
-    _ = window;
     _ = scancode;
     _ = mods;
     //input.updateMovement(key, action);
     log.debug("{} {}\n", .{ key, action });
+
+    if (key == .escape and action == .press) {
+        window.setInputMode(.cursor, .normal);
+    }
 }

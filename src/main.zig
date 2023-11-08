@@ -31,6 +31,8 @@ fn setupWindow(width: i32, height: i32) !*glfw.Window {
     const window = try glfw.Window.create(width, height, "ThunderNut Engine", null);
     glfw.makeContextCurrent(window);
 
+    window.setInputMode(.cursor, .disabled);
+
     return window;
 }
 
@@ -38,7 +40,7 @@ pub fn main() !void {
     try run();
 }
 
-var camera = cam.Camera.init(0, 0, -7);
+var camera = cam.Camera.init(0, 2, -7);
 var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
@@ -141,7 +143,7 @@ fn run() !void {
 
         const time = glfw.getTime();
         updateDeltaTime(time);
-        callbacks.input.updateMovement(window);
+        callbacks.input.updateInput(window);
         updateCamera(&callbacks.input);
 
         const angle = @as(f32, @floatCast(time));
