@@ -43,8 +43,11 @@ var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
 const cameraSpeed = 15;
-const mouseSpeed = 0.03;
+const mouseSpeed = 0.001;
 const playerSpeed = 80;
+const mouseSensitivity = zmath.splat(zmath.Vec, 10.0);
+var pitch: f32 = 0.0;
+var yaw: f32 = 0.0;
 
 pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const timeScale = @as(f32, @floatCast(deltaTime));
@@ -55,21 +58,14 @@ pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const w = camera.cameraPos[3];
     const prev = camera.cameraPos;
     const input: zmath.Vec = .{ x, y, z, w };
-    // const forward = camera.forwardDir();
-    // const proj = zmath.dot3(input, forward) / zmath.length3(forward);
-    // var newPos = input * proj;
-    // newPos[3] = 1;
     const cameraScale = timeScale * cameraSpeed;
     camera.cameraPos = zmath.lerp(prev, input, cameraScale);
 
-    if (!inputActions.isMouseCenter) {
-        const pitch = inputActions.mouseDirection[1];
-        const yaw = inputActions.mouseDirection[0];
-        const prevRotation = camera.cameraOrientation;
-        // const rotation = zmath.quatFromRollPitchYaw(pitch, yaw, 0);
-        const rotation: zmath.Vec = .{ -pitch, yaw, 0, 1 };
-        camera.cameraOrientation = zmath.slerp(prevRotation, rotation, cameraScale * mouseSpeed);
-    }
+    pitch += inputActions.mouseDelta[1] * mouseSpeed;
+    yaw += inputActions.mouseDelta[0] * mouseSpeed;
+    //const mouseInput = inputActions.mouseDirection * zmath.splat(zmath.Vec, @as(f32, @floatCast(deltaTime)));
+    const rotation = zmath.quatFromRollPitchYawV(.{ pitch, yaw, 0, 0 });
+    camera.cameraOrientation = rotation;
     viewMat = camera.viewMatrix();
     //std.log.debug("delta time: {}", .{deltaTime});
     //std.log.debug("cameraPos: {any}", .{camera.cameraPos});

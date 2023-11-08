@@ -78,6 +78,9 @@ inline fn i32ToF64(x: i32) f64 {
 pub const InputActions = struct {
     movement: @Vector(2, f32) = @splat(0),
     mouseDirection: zmath.Vec = @splat(0),
+    mouseDelta: zmath.Vec = @splat(0),
+    prevMouseX: f32 = 0,
+    prevMouseY: f32 = 0,
     callbacks: std.ArrayList(InputActionCallback),
     isMouseCenter: bool = true,
 
@@ -86,9 +89,9 @@ pub const InputActions = struct {
         const a = enumToFloat(window, glfw.Key.a);
         const s = enumToFloat(window, glfw.Key.s);
         const d = enumToFloat(window, glfw.Key.d);
-        const inputVector: zmath.Vec = .{w, a, s, d};
-        const axisX: zmath.Vec = .{0, -1, 0, 1};
-        const axisY: zmath.Vec = .{1, 0, -1, 0};
+        const inputVector: zmath.Vec = .{ w, a, s, d };
+        const axisX: zmath.Vec = .{ 0, -1, 0, 1 };
+        const axisY: zmath.Vec = .{ 1, 0, -1, 0 };
         const dotX = zmath.dot4(inputVector, axisX);
         const dotY = zmath.dot4(inputVector, axisY);
         const mask = @Vector(2, f32){ 0, -1 };
@@ -99,27 +102,16 @@ pub const InputActions = struct {
 
         //std.log.debug("input: {any}", .{input.movement});
 
-        const windowSize = window.getSize();
-        const centerX = i32ToF64(windowSize[0]) / 2.0;
-        const centerY = i32ToF64(windowSize[1]) / 2.0;
         const cursorPos = window.getCursorPos();
-        // mouse x, y from center of window
-        // yaw: x, pitch: y, roll: z
-        const dirX = cursorPos[0] - centerX;
-        const dirY = centerY - cursorPos[1];
-        const mouseDir: zmath.Vec = .{@as(f32, @floatCast(dirX)), @as(f32, @floatCast(dirY)), 0, 0};
-        const strength: f32 = zmath.length2(mouseDir)[0];
-        const windowScale = 0.05 * std.math.sqrt(@as(f32, @floatFromInt(windowSize[0] * windowSize[0] + windowSize[1] * windowSize[1])));
-        if (strength > windowScale) {
-            self.mouseDirection = zmath.normalize2(mouseDir);
-            self.isMouseCenter = false;
-        } else {
-            //self.mouseDirection = @splat(0);
-            self.isMouseCenter = true;
-        }
+        // pitch, yaw, roll
+        const mouseX = @as(f32, @floatCast(cursorPos[0]));
+        const mouseY = @as(f32, @floatCast(cursorPos[1]));
+        self.mouseDirection = .{ mouseX, mouseY, 0, 0 };
+        self.mouseDelta = .{ mouseX - self.prevMouseX, mouseY - self.prevMouseY, 0, 0 };
+        self.prevMouseX = mouseX;
+        self.prevMouseY = mouseY;
 
-        // std.log.debug("dirX: {}, dirY: {}", .{ self.mouseDirection[0], self.mouseDirection[1] });
-        std.log.debug("mouse strength {}", .{strength});
+        std.log.debug("dirX: {}, dirY: {}", .{ self.mouseDirection[0], self.mouseDirection[1] });
 
         //for (self.callbacks.items) |callback| {
         //    callback(self);
