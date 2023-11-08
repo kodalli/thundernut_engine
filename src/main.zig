@@ -64,22 +64,16 @@ pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const z = inputActions.movement[1];
     const y = 0;
     const w = 0;
-    const input: zmath.Quat = .{ x, y, z, w };
+    const input: zmath.Vec = .{ x, y, z, w };
 
-    const orientationConjugate = zmath.conjugate(rotation);
-    const movementAlignedToOrientation = zmath.qmul(zmath.qmul(rotation, input), orientationConjugate);
-    const newPos = movementAlignedToOrientation * zmath.splat(zmath.Vec, speedScale);
+    const rotatedMovement = zmath.rotate(rotation, input);
+    const movementVec = rotatedMovement * zmath.splat(zmath.Vec, speedScale);
     const prevPos = camera.cameraPos;
-    //camera.cameraPos = zmath.lerp(prev, newPos, timeScale * playerSpeed);
 
     std.log.debug("input: {any}", .{rotation});
-    camera.cameraPos = newPos + prevPos;
-
-    //const mouseInput = inputActions.mouseDirection * zmath.splat(zmath.Vec, @as(f32, @floatCast(deltaTime)));
+    camera.cameraPos = prevPos + movementVec;
 
     viewMat = camera.viewMatrix();
-    //std.log.debug("delta time: {}", .{deltaTime});
-    //std.log.debug("cameraPos: {any}", .{camera.cameraPos});
 }
 
 inline fn updateDeltaTime(time: f64) void {
