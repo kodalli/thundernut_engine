@@ -111,7 +111,7 @@ pub const InputActions = struct {
         self.prevMouseX = mouseX;
         self.prevMouseY = mouseY;
 
-        std.log.debug("dirX: {}, dirY: {}", .{ self.mouseDirection[0], self.mouseDirection[1] });
+        //std.log.debug("dirX: {}, dirY: {}", .{ self.mouseDirection[0], self.mouseDirection[1] });
 
         //for (self.callbacks.items) |callback| {
         //    callback(self);
