@@ -16,8 +16,8 @@ pub const Camera = struct {
             .upDirection = zmath.f32x4(0, 1, 0, 1),
             .cameraOrientation = zmath.qidentity(),
             .fov = 70,
-            .nearPlane = 0.1,
-            .farPlane = 10,
+            .nearPlane = 0.3,
+            .farPlane = 1000,
         };
     }
 

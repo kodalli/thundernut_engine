@@ -44,7 +44,7 @@ var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
 const cameraSpeed = 15;
 const mouseSpeed = 0.001;
-const playerSpeed = 80;
+const playerSpeed: f32 = 10;
 const mouseSensitivity = zmath.splat(zmath.Vec, 10.0);
 var pitch: f32 = 0.0;
 var yaw: f32 = 0.0;
@@ -52,17 +52,23 @@ var yaw: f32 = 0.0;
 pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const timeScale = @as(f32, @floatCast(deltaTime));
     const speedScale = timeScale * playerSpeed;
-    const x = (inputActions.movement[0] * speedScale) + camera.cameraPos[0];
-    const z = (inputActions.movement[1] * speedScale) + camera.cameraPos[2];
+    const x = inputActions.movement[0] * speedScale;
+    const z = inputActions.movement[1] * speedScale;
     const y = camera.cameraPos[1];
     const w = camera.cameraPos[3];
     const prev = camera.cameraPos;
     const input: zmath.Vec = .{ x, y, z, w };
-    const cameraScale = timeScale * cameraSpeed;
-    camera.cameraPos = zmath.lerp(prev, input, cameraScale);
 
     pitch += inputActions.mouseDelta[1] * mouseSpeed;
     yaw += inputActions.mouseDelta[0] * mouseSpeed;
+
+    const viewYaw = zmath.quatFromRollPitchYaw(0, yaw, 0);
+    const viewYawMat = zmath.matFromQuat(viewYaw);
+    const normDir = zmath.normalize3(zmath.mul(input, viewYawMat));
+    const newPos = prev + normDir;
+    //camera.cameraPos = zmath.lerp(prev, newPos, timeScale * playerSpeed);
+    camera.cameraPos = newPos;
+
     //const mouseInput = inputActions.mouseDirection * zmath.splat(zmath.Vec, @as(f32, @floatCast(deltaTime)));
     const rotation = zmath.quatFromRollPitchYawV(.{ pitch, yaw, 0, 0 });
     camera.cameraOrientation = rotation;
