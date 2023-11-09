@@ -45,6 +45,10 @@ pub fn build(b: *std.build.Builder) !void {
     });
     zphysics_pkg.link(exe);
 
+    const zstbi = @import("libs/zig-gamedev/libs/zstbi/build.zig");
+    const zstbi_pkg = zstbi.package(b, target, optimize, .{});
+    zstbi_pkg.link(exe);
+
     // Same as above for our GL module,
     // because we copied the GL code into the project
     // we instead just create the module inline

@@ -8,6 +8,7 @@ const renderer = @import("libs/renderer/mesh_renderer.zig");
 const shader = @import("libs/renderer/shaders.zig");
 const cam = @import("libs/renderer/camera.zig");
 const callbacks = @import("libs/callbacks.zig");
+const zstbi = @import("zstbi");
 
 const print = std.debug.print;
 pub const GLProc = *const fn () callconv(.C) void;
@@ -40,14 +41,12 @@ pub fn main() !void {
     try run();
 }
 
-var camera = cam.Camera.init(0, 2, -7);
+var camera = cam.Camera.init(0, 1.5, -7);
 var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
-const cameraSpeed = 15;
 const mouseSpeed = 0.001;
 const playerSpeed: f32 = 5;
-const mouseSensitivity = zmath.splat(zmath.Vec, 10.0);
 var pitch: f32 = 0.0;
 var yaw: f32 = 0.0;
 
@@ -69,10 +68,11 @@ pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
     const input: zmath.Vec = .{ x, y, z, w };
 
     const rotatedMovement = zmath.rotate(rotation, input);
-    const movementVec = rotatedMovement * zmath.splat(zmath.Vec, speedScale);
+    // Use for free movement
+    //const movementVec = rotatedMovement * zmath.splat(zmath.Vec, speedScale);
+    const movementVec = rotatedMovement * zmath.f32x4(speedScale, 0, speedScale, 0);
     const prevPos = camera.cameraPos;
 
-    std.log.debug("input: {any}", .{rotation});
     camera.cameraPos = prevPos + movementVec;
 
     viewMat = camera.viewMatrix();
@@ -84,9 +84,8 @@ inline fn updateDeltaTime(time: f64) void {
 }
 
 inline fn modelViewProjectionArr(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) [16]f32 {
-    _ = rotation;
-    // const transformMat = zmath.mul(rotation, translation);
-    const transformMat = translation;
+    const transformMat = zmath.mul(rotation, translation);
+    //const transformMat = translation;
     const res = zmath.mul(transformMat, viewProjMat);
     const modelArray = zmath.matToArr(res);
     return modelArray;
@@ -116,6 +115,9 @@ fn run() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
+
+    zstbi.init(allocator);
+    defer zstbi.deinit();
 
     var mesh = try renderer.createMesh(allocator);
     const meshes = [_]renderer.Mesh{ mesh, mesh };
