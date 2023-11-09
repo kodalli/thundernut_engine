@@ -88,6 +88,12 @@ If you have multiple instances of same obj type like prefabs of same geometry, s
   - Calculates percentage of sampels in the depth buffer that are closer to the light than the mesh surface
 - Essentially creates a blur effect, improves shadow quality
 - Lets you use low res shadow maps
+- Steps:
+  1. On current pixels get 3x3 filter
+  2. Sample shadow depth of each pixel in filter on the current pixel
+  3. Compare that with depth of current pixel -> 0 or 1
+  4. Final shadow factor is the average all those results
+  5. 10 possible shadow factors 0, 1/9, 2/9 ... 1
 
 #### Shadow Map Filter by Jimenez14
 - Cheaper than Castano but can flicker
