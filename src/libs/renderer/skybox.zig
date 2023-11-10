@@ -89,13 +89,15 @@ pub const Cubemap = struct {
 
     // Render the skybox last so fragments can be discarded in early depth testing to save bandwidth
     // Avoids rendering stuff that won't be visible
-    pub fn init(self: *Cubemap, faces: [6][:0]u8) !*Cubemap {
+    pub fn init(faces: [6][:0]const u8) !Cubemap {
+        var self: Cubemap = .{};
         gl.genTextures(1, &self.cubemapTexture);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubemapTexture);
 
-        for (0..faces.items.len, faces.items) |i, face_path| {
-            var img = try zstbi.Image.loadFromFile(face_path, 0);
-            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGB, img.width, img.height, 0, gl.RGB, gl.UNSIGNED_BYTE, &img.data);
+        for (faces, 0..faces.len) |facePath, i| {
+            std.log.debug("facePath: {s}", .{facePath});
+            var img = try zstbi.Image.loadFromFile(facePath, 0);
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + @as(gl.GLuint, @intCast(i)), 0, gl.RGB, @as(gl.GLint, @intCast(img.width)), @as(gl.GLint, @intCast(img.height)), 0, gl.RGB, gl.UNSIGNED_BYTE, &img.data[0]);
             img.deinit();
         }
 
@@ -105,11 +107,12 @@ pub const Cubemap = struct {
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
 
-        gl.genVertexArrays(&self.skyboxVAO);
+        gl.genVertexArrays(1, &self.skyboxVAO);
         self.shaderProgram = shaders.loadShaders(vertexShader, fragmentShader);
 
         self.projectionLoc = gl.getUniformLocation(self.shaderProgram, "projection");
         self.viewLoc = gl.getUniformLocation(self.shaderProgram, "view");
+        return self;
     }
 
     pub fn deinit(self: *Cubemap) void {
@@ -118,7 +121,7 @@ pub const Cubemap = struct {
         gl.deleteVertexArrays(1, &self.skyboxVAO);
     }
 
-    pub fn renderSkybox(self: *Cubemap, projection: zmath.Mat, partialView: zmath.Mat) void {
+    pub fn render(self: *Cubemap, projection: zmath.Mat, partialView: zmath.Mat) void {
         gl.depthMask(gl.FALSE);
         gl.useProgram(self.shaderProgram);
 

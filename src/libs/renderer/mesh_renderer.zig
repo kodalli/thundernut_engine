@@ -72,6 +72,7 @@ pub const Mesh = struct {
         mesh.normalOffset = @as(*const anyopaque, @ptrFromInt(normalOffset));
         mesh.uvOffset = @as(*const anyopaque, @ptrFromInt(uvOffset));
 
+        // Only need to buffer data once during initialization
         gl.genVertexArrays(1, &mesh.vao);
         gl.genBuffers(1, &mesh.vbo);
         gl.genBuffers(1, &mesh.ebo);
@@ -82,18 +83,6 @@ pub const Mesh = struct {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.ebo);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBufferSize, mutIndices.ptr, gl.STATIC_DRAW);
-
-        // Position
-        //gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, vertexSize, null);
-        //gl.enableVertexAttribArray(0);
-
-        // Normal
-        //gl.vertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(normalOffset)));
-        //gl.enableVertexAttribArray(1);
-
-        // UV
-        //gl.vertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(uvOffset)));
-        //gl.enableVertexAttribArray(2);
 
         return mesh;
     }
@@ -239,11 +228,9 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
     return mesh;
 }
 
-pub fn renderMeshes(meshes: []const Mesh, modelArrays: std.ArrayList([*c]const f32), modelLoc: gl.GLint) void {
+pub fn renderMeshes(meshes: []const Mesh, modelArrays: std.ArrayList([*c]const f32), modelLoc: gl.GLint, shaderProgram: gl.GLuint) void {
+    gl.useProgram(shaderProgram);
     for (meshes, modelArrays.items) |mesh, modelArr| {
-        //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, modelArr);
-        //gl.bindVertexArray(mesh.vao);
-        //gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, null);
         mesh.render(modelLoc, modelArr);
     }
 }

@@ -20,8 +20,6 @@ pub fn loadShaders(vert: [:0]const u8, frag: [:0]const u8) gl.GLuint {
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
 
-    gl.useProgram(shaderProgram);
-
     return shaderProgram;
 }
 

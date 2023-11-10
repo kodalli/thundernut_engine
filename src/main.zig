@@ -58,8 +58,8 @@ inline fn modelViewProjectionMat(translation: zmath.Mat, rotation: zmath.Mat, vi
     return res;
 }
 
-fn loadSkybox() void {
-    const files: [6][:0]u8 = .{
+fn loadSkybox(allocator: std.mem.Allocator) !skybox.Cubemap {
+    var files = [_][:0]const u8{
         "../assets/skybox/right.jpg",
         "../assets/skybox/left.jpg",
         "../assets/skybox/top.jpg",
@@ -68,8 +68,28 @@ fn loadSkybox() void {
         "../assets/skybox/back.jpg",
     };
 
-    var cubemap = skybox.Cubemap.init(files);
-    _ = cubemap;
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    const alloc = arena.allocator();
+
+    for (files, 0..files.len) |file, i| {
+        const str = try std.fs.cwd().realpathAlloc(alloc, file);
+        const as_slice = @as([:0]const u8, @ptrCast(str));
+        std.log.debug("path: {s}", .{as_slice});
+        files[i] = as_slice;
+    }
+
+    const cubemap = try skybox.Cubemap.init(files);
+    return cubemap;
+}
+
+fn partialViewMat(viewMat: zmath.Mat) zmath.Mat {
+    var partialView = viewMat;
+    partialView[0][3] = 0;
+    partialView[1][3] = 0;
+    partialView[2][3] = 0;
+    partialView[3] = zmath.splat(zmath.Vec, 0);
+    return partialView;
 }
 
 fn run() !void {
@@ -104,6 +124,9 @@ fn run() !void {
     const meshes = [_]renderer.Mesh{ mesh, mesh };
     defer mesh.deinit();
 
+    var skyboxMesh = try loadSkybox(allocator);
+    defer skyboxMesh.deinit();
+
     callbacks.initCallbackHandler(window, allocator);
     defer callbacks.deinitCallbackHandler();
     //try callbacks.input.addCallback(updateCamera);
@@ -130,6 +153,7 @@ fn run() !void {
         world.updateDeltaTime(time);
         callbacks.input.updateInput(window);
         viewMat = camera.updateCamera(&callbacks.input, &world);
+        const partialView = partialViewMat(viewMat);
 
         const angle = @as(f32, @floatCast(time));
         const rotX = zmath.rotationX(angle);
@@ -142,11 +166,10 @@ fn run() !void {
         try modelArrays.append(zmath.arrNPtr(&modelMat1));
         try modelArrays.append(zmath.arrNPtr(&modelMat2));
 
-        //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArray);
-
-        renderer.renderMeshes(&meshes, modelArrays, modelLoc);
+        renderer.renderMeshes(&meshes, modelArrays, modelLoc, shaderProgram);
         modelArrays.clearAndFree();
-        //gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
+
+        skyboxMesh.render(projectionMat, partialView);
 
         window.swapBuffers();
         glfw.pollEvents();
