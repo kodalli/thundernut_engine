@@ -34,20 +34,22 @@ pub const MeshInfo = struct {
 };
 
 pub const Mesh = struct {
-    vao: gl.GLuint,
-    vbo: gl.GLuint,
-    ebo: gl.GLuint,
+    vao: gl.GLuint = undefined,
+    vbo: gl.GLuint = undefined,
+    ebo: gl.GLuint = undefined,
     vertexCount: gl.GLsizei,
     indexCount: gl.GLsizei,
+    vertexBufferSize: gl.GLsizeiptr = undefined,
+    indexBufferSize: gl.GLsizeiptr = undefined,
+    vertexSize: gl.GLsizei = undefined,
+    normalOffset: *const anyopaque = undefined,
+    uvOffset: *const anyopaque = undefined,
 
     pub fn init(allocator: std.mem.Allocator, vertices: []const f32, indices: []const gl.GLuint) !Mesh {
         std.debug.assert(vertices.len < std.math.maxInt(gl.GLsizei));
         std.debug.assert(indices.len < std.math.maxInt(gl.GLsizei));
 
         var mesh = Mesh{
-            .vao = undefined,
-            .vbo = undefined,
-            .ebo = undefined,
             .vertexCount = @as(gl.GLsizei, @intCast(vertices.len)),
             .indexCount = @as(gl.GLsizei, @intCast(indices.len)),
         };
@@ -61,11 +63,14 @@ pub const Mesh = struct {
         std.mem.copyForwards(gl.GLuint, mutIndices, indices);
 
         const floatSize = @sizeOf(gl.GLfloat);
-        const vertexBufferSize = @as(gl.GLsizeiptr, @intCast(floatSize * mesh.vertexCount));
-        const indexBufferSize = @as(gl.GLsizeiptr, @intCast(@sizeOf(gl.GLuint) * mesh.indexCount));
-        const vertexSize = 8 * floatSize;
         const normalOffset = 3 * floatSize;
         const uvOffset = 6 * floatSize;
+
+        mesh.vertexBufferSize = @as(gl.GLsizeiptr, @intCast(floatSize * mesh.vertexCount));
+        mesh.indexBufferSize = @as(gl.GLsizeiptr, @intCast(@sizeOf(gl.GLuint) * mesh.indexCount));
+        mesh.vertexSize = 8 * floatSize;
+        mesh.normalOffset = @as(*const anyopaque, @ptrFromInt(normalOffset));
+        mesh.uvOffset = @as(*const anyopaque, @ptrFromInt(uvOffset));
 
         gl.genVertexArrays(1, &mesh.vao);
         gl.genBuffers(1, &mesh.vbo);
@@ -73,24 +78,48 @@ pub const Mesh = struct {
 
         gl.bindVertexArray(mesh.vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, vertexBufferSize, mutVertices.ptr, gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.vertexBufferSize, mutVertices.ptr, gl.STATIC_DRAW);
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.ebo);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexBufferSize, mutIndices.ptr, gl.STATIC_DRAW);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBufferSize, mutIndices.ptr, gl.STATIC_DRAW);
 
         // Position
-        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, vertexSize, null);
+        //gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, vertexSize, null);
+        //gl.enableVertexAttribArray(0);
+
+        // Normal
+        //gl.vertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(normalOffset)));
+        //gl.enableVertexAttribArray(1);
+
+        // UV
+        //gl.vertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(uvOffset)));
+        //gl.enableVertexAttribArray(2);
+
+        return mesh;
+    }
+
+    pub fn render(self: *const Mesh, modelLoc: gl.GLint, modelArr: [*c]const f32) void {
+        gl.bindVertexArray(self.vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, self.vbo);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.ebo);
+
+        // Position
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, self.vertexSize, null);
         gl.enableVertexAttribArray(0);
 
         // Normal
-        gl.vertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(normalOffset)));
+        gl.vertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, self.vertexSize, self.normalOffset);
         gl.enableVertexAttribArray(1);
 
         // UV
-        gl.vertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, vertexSize, @as(*const anyopaque, @ptrFromInt(uvOffset)));
+        gl.vertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, self.vertexSize, self.uvOffset);
         gl.enableVertexAttribArray(2);
 
-        return mesh;
+        // Pass data to shader
+        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, modelArr);
+        gl.bindVertexArray(self.vao);
+
+        gl.drawElements(gl.TRIANGLES, self.indexCount, gl.UNSIGNED_INT, null);
     }
 
     pub fn deinit(self: *Mesh) void {
@@ -210,10 +239,11 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
     return mesh;
 }
 
-pub fn render(meshes: []const Mesh, modelArrays: std.ArrayList([*c]const f32), modelLoc: gl.GLint) void {
+pub fn renderMeshes(meshes: []const Mesh, modelArrays: std.ArrayList([*c]const f32), modelLoc: gl.GLint) void {
     for (meshes, modelArrays.items) |mesh, modelArr| {
-        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, modelArr);
-        gl.bindVertexArray(mesh.vao);
-        gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, null);
+        //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, modelArr);
+        //gl.bindVertexArray(mesh.vao);
+        //gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, null);
+        mesh.render(modelLoc, modelArr);
     }
 }

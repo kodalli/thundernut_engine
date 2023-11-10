@@ -1,5 +1,5 @@
-const std = @import("std");
 const glfw = @import("zglfw");
+const std = @import("std");
 const gl = @import("gl");
 const utils = @import("libs/utils.zig");
 const zmath = @import("zmath");
@@ -9,6 +9,7 @@ const shader = @import("libs/renderer/shaders.zig");
 const cam = @import("libs/renderer/camera.zig");
 const callbacks = @import("libs/callbacks.zig");
 const zstbi = @import("zstbi");
+const skybox = @import("libs/renderer/skybox.zig");
 
 const print = std.debug.print;
 pub const GLProc = *const fn () callconv(.C) void;
@@ -41,52 +42,34 @@ pub fn main() !void {
     try run();
 }
 
-var camera = cam.Camera.init(0, 1.5, -7);
-var deltaTime: f64 = 0;
-var lastTime: f64 = 0;
-const mouseSpeed = 0.001;
-const playerSpeed: f32 = 5;
-var pitch: f32 = 0.0;
-var yaw: f32 = 0.0;
+pub const World = struct {
+    deltaTime: f64 = 0,
+    lastTime: f64 = 0,
 
-pub fn updateCamera(inputActions: *callbacks.InputActions) zmath.Mat {
-    const timeScale = @as(f32, @floatCast(deltaTime));
-    const speedScale = timeScale * playerSpeed;
-
-    // Camera orientation
-    pitch += inputActions.mouseDelta[1] * mouseSpeed;
-    yaw += inputActions.mouseDelta[0] * mouseSpeed;
-    const rotation = zmath.quatFromRollPitchYawV(.{ pitch, yaw, 0, 0 });
-    camera.cameraOrientation = rotation;
-
-    // Camera movement
-    const x = inputActions.movement[0];
-    const z = inputActions.movement[1];
-    const y = 0;
-    const w = 0;
-    const input: zmath.Vec = .{ x, y, z, w };
-
-    const rotatedMovement = zmath.rotate(rotation, input);
-    // Use for free movement
-    //const movementVec = rotatedMovement * zmath.splat(zmath.Vec, speedScale);
-    const movementVec = rotatedMovement * zmath.f32x4(speedScale, 0, speedScale, 0);
-    const prevPos = camera.cameraPos;
-
-    camera.cameraPos = prevPos + movementVec;
-
-    return camera.viewMatrix();
-}
-
-inline fn updateDeltaTime(time: f64) void {
-    deltaTime = time - lastTime;
-    lastTime = time;
-}
+    pub fn updateDeltaTime(self: *World, time: f64) void {
+        self.deltaTime = time - self.lastTime;
+        self.lastTime = time;
+    }
+};
 
 inline fn modelViewProjectionMat(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) zmath.Mat {
     const transformMat = zmath.mul(rotation, translation);
-    //const transformMat = translation;
     const res = zmath.mul(transformMat, viewProjMat);
     return res;
+}
+
+fn loadSkybox() void {
+    const files: [6][:0]u8 = .{
+        "../assets/skybox/right.jpg",
+        "../assets/skybox/left.jpg",
+        "../assets/skybox/top.jpg",
+        "../assets/skybox/bottom.jpg",
+        "../assets/skybox/front.jpg",
+        "../assets/skybox/back.jpg",
+    };
+
+    var cubemap = skybox.Cubemap.init(files);
+    _ = cubemap;
 }
 
 fn run() !void {
@@ -125,6 +108,8 @@ fn run() !void {
     defer callbacks.deinitCallbackHandler();
     //try callbacks.input.addCallback(updateCamera);
 
+    var world: World = .{};
+    var camera = cam.Camera.init(0, 1.5, -7);
     const projectionMat = camera.perspectiveMatrix(window.getSize());
     var viewMat = camera.viewMatrix();
 
@@ -142,9 +127,9 @@ fn run() !void {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const time = glfw.getTime();
-        updateDeltaTime(time);
+        world.updateDeltaTime(time);
         callbacks.input.updateInput(window);
-        viewMat = updateCamera(&callbacks.input);
+        viewMat = camera.updateCamera(&callbacks.input, &world);
 
         const angle = @as(f32, @floatCast(time));
         const rotX = zmath.rotationX(angle);
@@ -159,7 +144,7 @@ fn run() !void {
 
         //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArray);
 
-        renderer.render(&meshes, modelArrays, modelLoc);
+        renderer.renderMeshes(&meshes, modelArrays, modelLoc);
         modelArrays.clearAndFree();
         //gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_INT, null);
 

@@ -30,7 +30,7 @@ const fragmentShader =
     \\
     \\uniform samplerCube skybox;
     \\
-    \\void main() {
+    \\void main() {nrChannels
     \\  FragColor = texture(skybox, TexCoords);
     \\}
 ;
@@ -80,14 +80,16 @@ const skyboxVertices: [36][3]f32 = .{
     .{ 1.0, -1.0, 1.0 },
 };
 
-const Cubemap = struct {
+pub const Cubemap = struct {
     cubemapTexture: gl.GLuint = undefined,
     shaderProgram: gl.GLuint = undefined,
     skyboxVAO: gl.GLuint = undefined,
+    projectionLoc: gl.GLint = undefined,
+    viewLoc: gl.GLint = undefined,
 
     // Render the skybox last so fragments can be discarded in early depth testing to save bandwidth
     // Avoids rendering stuff that won't be visible
-    pub fn loadCubemap(self: *Cubemap, faces: std.ArrayList([:0]u8)) !void {
+    pub fn init(self: *Cubemap, faces: [6][:0]u8) !*Cubemap {
         gl.genTextures(1, &self.cubemapTexture);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubemapTexture);
 
@@ -105,6 +107,9 @@ const Cubemap = struct {
 
         gl.genVertexArrays(&self.skyboxVAO);
         self.shaderProgram = shaders.loadShaders(vertexShader, fragmentShader);
+
+        self.projectionLoc = gl.getUniformLocation(self.shaderProgram, "projection");
+        self.viewLoc = gl.getUniformLocation(self.shaderProgram, "view");
     }
 
     pub fn deinit(self: *Cubemap) void {
@@ -113,12 +118,16 @@ const Cubemap = struct {
         gl.deleteVertexArrays(1, &self.skyboxVAO);
     }
 
-    pub fn renderSkybox(self: *Cubemap, cameraProjectionMat: zmath.Mat) void {
-        _ = cameraProjectionMat;
+    pub fn renderSkybox(self: *Cubemap, projection: zmath.Mat, partialView: zmath.Mat) void {
         gl.depthMask(gl.FALSE);
         gl.useProgram(self.shaderProgram);
 
         // set view and projection matrix
+        const projectionPtr = zmath.arrNPtr(&projection);
+        const viewPtr = zmath.arrNPtr(&partialView);
+        gl.uniformMatrix4fv(self.projectionLoc, 1, gl.FALSE, projectionPtr);
+        gl.uniformMatrix4fv(self.viewLoc, 1, gl.FALSE, viewPtr);
+
         gl.bindVertexArray(self.skyboxVAO);
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, self.cubemapTexture);
         gl.drawArrays(gl.TRIANGLES, 0, 36);
