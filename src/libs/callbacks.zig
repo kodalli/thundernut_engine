@@ -55,7 +55,7 @@ pub fn cursorPosCallback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C
 
 pub fn mouseButtonCallback(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = mods;
-    log.debug("mouse action {}\n", .{action});
+    // log.debug("mouse action {}\n", .{action});
 
     if (button == .left and action == .press) {
         window.setInputMode(.cursor, .disabled);
@@ -63,8 +63,10 @@ pub fn mouseButtonCallback(window: *glfw.Window, button: glfw.MouseButton, actio
 }
 
 pub fn scrollCallback(window: *glfw.Window, xoffset: f64, yoffset: f64) callconv(.C) void {
+    _ = yoffset;
+    _ = xoffset;
     _ = window;
-    log.debug("scroll action xoffset:{} yoffset:{}\n", .{ xoffset, yoffset });
+    // log.debug("scroll action xoffset:{} yoffset:{}\n", .{ xoffset, yoffset });
 }
 
 pub const InputActionCallback = *const fn (input: *InputActions) void;
@@ -132,7 +134,7 @@ pub fn keyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: g
     _ = scancode;
     _ = mods;
     //input.updateMovement(key, action);
-    log.debug("{} {}\n", .{ key, action });
+    // log.debug("{} {}\n", .{ key, action });
 
     if (key == .escape and action == .press) {
         window.setInputMode(.cursor, .normal);

@@ -42,7 +42,6 @@ pub fn main() !void {
 }
 
 var camera = cam.Camera.init(0, 1.5, -7);
-var viewMat: zmath.Mat = undefined;
 var deltaTime: f64 = 0;
 var lastTime: f64 = 0;
 const mouseSpeed = 0.001;
@@ -50,7 +49,7 @@ const playerSpeed: f32 = 5;
 var pitch: f32 = 0.0;
 var yaw: f32 = 0.0;
 
-pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
+pub fn updateCamera(inputActions: *callbacks.InputActions) zmath.Mat {
     const timeScale = @as(f32, @floatCast(deltaTime));
     const speedScale = timeScale * playerSpeed;
 
@@ -75,7 +74,7 @@ pub inline fn updateCamera(inputActions: *callbacks.InputActions) void {
 
     camera.cameraPos = prevPos + movementVec;
 
-    viewMat = camera.viewMatrix();
+    return camera.viewMatrix();
 }
 
 inline fn updateDeltaTime(time: f64) void {
@@ -83,12 +82,11 @@ inline fn updateDeltaTime(time: f64) void {
     lastTime = time;
 }
 
-inline fn modelViewProjectionArr(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) [16]f32 {
+inline fn modelViewProjectionMat(translation: zmath.Mat, rotation: zmath.Mat, viewProjMat: zmath.Mat) zmath.Mat {
     const transformMat = zmath.mul(rotation, translation);
     //const transformMat = translation;
     const res = zmath.mul(transformMat, viewProjMat);
-    const modelArray = zmath.matToArr(res);
-    return modelArray;
+    return res;
 }
 
 fn run() !void {
@@ -128,7 +126,7 @@ fn run() !void {
     //try callbacks.input.addCallback(updateCamera);
 
     const projectionMat = camera.perspectiveMatrix(window.getSize());
-    viewMat = camera.viewMatrix();
+    var viewMat = camera.viewMatrix();
 
     std.log.debug("projectionMat: {any}\nviewMat: {any}\n", .{ projectionMat, viewMat });
 
@@ -137,7 +135,7 @@ fn run() !void {
     const translationMat1 = zmath.translation(2, 2, 2);
     const translationMat2 = zmath.translation(0, 0, 0);
 
-    var modelArrays = std.ArrayList([16]f32).init(allocator);
+    var modelArrays = std.ArrayList([*c]const f32).init(allocator);
     defer modelArrays.deinit();
 
     while (!window.shouldClose()) {
@@ -146,7 +144,7 @@ fn run() !void {
         const time = glfw.getTime();
         updateDeltaTime(time);
         callbacks.input.updateInput(window);
-        updateCamera(&callbacks.input);
+        viewMat = updateCamera(&callbacks.input);
 
         const angle = @as(f32, @floatCast(time));
         const rotX = zmath.rotationX(angle);
@@ -154,10 +152,10 @@ fn run() !void {
         const rotationMat = zmath.mul(rotY, rotX);
 
         const viewProjMat = zmath.mul(viewMat, projectionMat);
-        const modelArray1 = modelViewProjectionArr(translationMat1, rotationMat, viewProjMat);
-        const modelArray2 = modelViewProjectionArr(translationMat2, rotationMat, viewProjMat);
-        try modelArrays.append(modelArray1);
-        try modelArrays.append(modelArray2);
+        const modelMat1 = modelViewProjectionMat(translationMat1, rotationMat, viewProjMat);
+        const modelMat2 = modelViewProjectionMat(translationMat2, rotationMat, viewProjMat);
+        try modelArrays.append(zmath.arrNPtr(&modelMat1));
+        try modelArrays.append(zmath.arrNPtr(&modelMat2));
 
         //gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArray);
 

@@ -210,9 +210,9 @@ pub fn createMesh(allocator: std.mem.Allocator) !Mesh {
     return mesh;
 }
 
-pub fn render(meshes: []const Mesh, modelArrays: std.ArrayList([16]f32), modelLoc: gl.GLint) void {
+pub fn render(meshes: []const Mesh, modelArrays: std.ArrayList([*c]const f32), modelLoc: gl.GLint) void {
     for (meshes, modelArrays.items) |mesh, modelArr| {
-        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, &modelArr);
+        gl.uniformMatrix4fv(modelLoc, 1, gl.FALSE, modelArr);
         gl.bindVertexArray(mesh.vao);
         gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_INT, null);
     }
